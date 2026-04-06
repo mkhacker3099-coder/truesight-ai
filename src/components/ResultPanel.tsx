@@ -1,14 +1,15 @@
-import { ShieldCheck, ShieldAlert, AlertTriangle, RotateCcw } from "lucide-react";
+import { ShieldCheck, ShieldAlert, AlertTriangle, RotateCcw, Mic, Eye, Image } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { AnalysisResult } from "./AnalysisPipeline";
 
 interface ResultPanelProps {
   result: AnalysisResult;
   isAudio: boolean;
+  isImage?: boolean;
   onReset: () => void;
 }
 
-const ResultPanel = ({ result, isAudio, onReset }: ResultPanelProps) => {
+const ResultPanel = ({ result, isAudio, isImage, onReset }: ResultPanelProps) => {
   const isFake = result.verdict === "fake";
 
   return (
@@ -39,22 +40,84 @@ const ResultPanel = ({ result, isAudio, onReset }: ResultPanelProps) => {
         </p>
       </div>
 
+      {/* Confidence bar */}
+      <div className="rounded-xl border border-border bg-card p-5">
+        <p className="text-sm text-muted-foreground mb-3">Overall Confidence Level</p>
+        <div className="h-4 rounded-full bg-muted overflow-hidden relative">
+          <div
+            className={`h-full rounded-full transition-all duration-1000 ${
+              result.confidence > 90 ? "bg-success" : result.confidence > 75 ? "bg-warning" : "bg-destructive"
+            }`}
+            style={{ width: `${result.confidence}%` }}
+          />
+        </div>
+        <div className="flex justify-between text-xs text-muted-foreground mt-2">
+          <span>0%</span>
+          <span className="font-mono font-bold text-foreground">{result.confidence}%</span>
+          <span>100%</span>
+        </div>
+      </div>
+
       {/* Score breakdown */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <ScoreCard
-          label="Voice Authenticity"
-          score={result.voiceScore}
-          max={100}
-          isFake={isFake}
-        />
-        {!isAudio && (
+      <div className={`grid grid-cols-1 ${isImage ? "" : isAudio ? "" : "sm:grid-cols-2"} gap-4`}>
+        {!isImage && (
+          <ScoreCard
+            label="Voice Authenticity"
+            score={result.voiceScore}
+            icon={<Mic className="w-4 h-4" />}
+            details={result.details}
+            type="voice"
+          />
+        )}
+        {!isAudio && !isImage && (
           <ScoreCard
             label="Facial Authenticity"
             score={result.facialScore}
-            max={100}
-            isFake={isFake}
+            icon={<Eye className="w-4 h-4" />}
+            details={result.details}
+            type="facial"
           />
         )}
+        {isImage && (
+          <ScoreCard
+            label="Image Authenticity"
+            score={result.imageScore}
+            icon={<Image className="w-4 h-4" />}
+            details={result.details}
+            type="image"
+          />
+        )}
+      </div>
+
+      {/* Detailed metrics */}
+      <div className="rounded-xl border border-border bg-card p-5">
+        <h3 className="font-semibold text-foreground mb-3 text-sm">Detailed Metrics</h3>
+        <div className="grid grid-cols-2 gap-3">
+          {result.details.mfccCoefficients != null && (
+            <MetricItem label="MFCC Coefficients" value={`${result.details.mfccCoefficients}`} />
+          )}
+          {result.details.pitchVariance != null && (
+            <MetricItem label="Pitch Variance" value={`${result.details.pitchVariance}`} />
+          )}
+          {result.details.facialLandmarks != null && (
+            <MetricItem label="Facial Landmarks" value={`${result.details.facialLandmarks}`} />
+          )}
+          {result.details.lipSyncScore != null && (
+            <MetricItem label="Lip-Sync Score" value={`${result.details.lipSyncScore}%`} />
+          )}
+          {result.details.noiseConsistency != null && (
+            <MetricItem label="Noise Consistency" value={`${result.details.noiseConsistency}%`} />
+          )}
+          {result.details.spectralAnomaly != null && (
+            <MetricItem label="Spectral Anomaly" value={result.details.spectralAnomaly ? "Yes" : "No"} warn={result.details.spectralAnomaly} />
+          )}
+          {result.details.ganFingerprint != null && (
+            <MetricItem label="GAN Fingerprint" value={result.details.ganFingerprint ? "Detected" : "None"} warn={result.details.ganFingerprint} />
+          )}
+          {result.details.pixelArtifacts != null && (
+            <MetricItem label="Pixel Artifacts" value={result.details.pixelArtifacts ? "Found" : "Clean"} warn={result.details.pixelArtifacts} />
+          )}
+        </div>
       </div>
 
       {/* Anomalies */}
@@ -105,29 +168,44 @@ const ResultPanel = ({ result, isAudio, onReset }: ResultPanelProps) => {
 const ScoreCard = ({
   label,
   score,
-  max,
-  isFake,
+  icon,
+  details,
+  type,
 }: {
   label: string;
   score: number;
-  max: number;
-  isFake: boolean;
+  icon: React.ReactNode;
+  details: AnalysisResult["details"];
+  type: "voice" | "facial" | "image";
 }) => {
-  const pct = (score / max) * 100;
   const color = score > 60 ? "bg-success" : score > 35 ? "bg-warning" : "bg-destructive";
+  const textColor = score > 60 ? "text-success" : score > 35 ? "text-warning" : "text-destructive";
 
   return (
     <div className="rounded-xl border border-border bg-card p-4">
-      <p className="text-sm text-muted-foreground mb-2">{label}</p>
-      <p className="text-2xl font-bold font-mono text-foreground mb-2">{score}%</p>
+      <div className="flex items-center gap-2 mb-2">
+        <span className={textColor}>{icon}</span>
+        <p className="text-sm text-muted-foreground">{label}</p>
+      </div>
+      <p className={`text-3xl font-bold font-mono mb-3 ${textColor}`}>{score}%</p>
       <div className="h-2 rounded-full bg-muted overflow-hidden">
         <div
           className={`h-full rounded-full transition-all duration-1000 ${color}`}
-          style={{ width: `${pct}%` }}
+          style={{ width: `${score}%` }}
         />
       </div>
+      <p className="text-xs text-muted-foreground mt-2">
+        {score > 60 ? "Likely authentic" : score > 35 ? "Suspicious" : "Likely manipulated"}
+      </p>
     </div>
   );
 };
+
+const MetricItem = ({ label, value, warn }: { label: string; value: string; warn?: boolean }) => (
+  <div className="bg-muted/50 rounded-lg p-3">
+    <p className="text-xs text-muted-foreground">{label}</p>
+    <p className={`text-sm font-mono font-semibold mt-1 ${warn ? "text-warning" : "text-foreground"}`}>{value}</p>
+  </div>
+);
 
 export default ResultPanel;
