@@ -1,16 +1,69 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState, useCallback, useRef } from "react";
+import Navbar from "@/components/Navbar";
+import HeroSection from "@/components/HeroSection";
+import FeatureGrid from "@/components/FeatureGrid";
+import FileUpload from "@/components/FileUpload";
+import AnalysisPipeline, { AnalysisResult } from "@/components/AnalysisPipeline";
+import ResultPanel from "@/components/ResultPanel";
 
-// IMPORTANT: Fully REPLACE this with your own code
-const PlaceholderIndex = () => {
-  // PLACEHOLDER: Replace this entire return statement with the user's app.
-  // The inline background color is intentionally not part of the design system.
+type Stage = "landing" | "upload" | "analyzing" | "result";
+
+const Index = () => {
+  const [stage, setStage] = useState<Stage>("landing");
+  const [file, setFile] = useState<File | null>(null);
+  const [result, setResult] = useState<AnalysisResult | null>(null);
+  const detectRef = useRef<HTMLDivElement>(null);
+
+  const scrollToDetect = () => {
+    setStage("upload");
+    setTimeout(() => detectRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+  };
+
+  const handleFileSelect = (f: File) => {
+    setFile(f);
+    setStage("analyzing");
+  };
+
+  const handleComplete = useCallback((r: AnalysisResult) => {
+    setResult(r);
+    setStage("result");
+  }, []);
+
+  const handleReset = () => {
+    setFile(null);
+    setResult(null);
+    setStage("upload");
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: '#fcfbf8' }}>
-      <img data-lovable-blank-page-placeholder="REMOVE_THIS" src="/placeholder.svg" alt="Your app will live here!" />
+    <div className="min-h-screen bg-background">
+      <Navbar />
+
+      {(stage === "landing" || stage === "upload") && (
+        <HeroSection onGetStarted={scrollToDetect} />
+      )}
+
+      <div id="features">
+        {(stage === "landing" || stage === "upload") && <FeatureGrid />}
+      </div>
+
+      <div id="detect" ref={detectRef} className="py-20 px-4">
+        <div className="container mx-auto">
+          {stage === "upload" && <FileUpload onFileSelect={handleFileSelect} />}
+          {stage === "analyzing" && file && (
+            <AnalysisPipeline file={file} onComplete={handleComplete} />
+          )}
+          {stage === "result" && result && (
+            <ResultPanel
+              result={result}
+              isAudio={file?.type.startsWith("audio") ?? false}
+              onReset={handleReset}
+            />
+          )}
+        </div>
+      </div>
     </div>
   );
 };
-
-const Index = PlaceholderIndex;
 
 export default Index;
