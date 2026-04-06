@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Upload, FileAudio, FileVideo, X } from "lucide-react";
+import { Upload, FileAudio, FileVideo, Image, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface FileUploadProps {
@@ -31,6 +31,9 @@ const FileUpload = ({ onFileSelect }: FileUploadProps) => {
 
   const isAudio = selectedFile?.type.startsWith("audio");
   const isVideo = selectedFile?.type.startsWith("video");
+  const isImage = selectedFile?.type.startsWith("image");
+
+  const FileIcon = isAudio ? FileAudio : isVideo ? FileVideo : Image;
 
   return (
     <div className="w-full max-w-2xl mx-auto">
@@ -38,7 +41,7 @@ const FileUpload = ({ onFileSelect }: FileUploadProps) => {
         Upload Media
       </h2>
       <p className="text-muted-foreground text-center mb-6">
-        Upload an audio or video file for deepfake analysis
+        Upload an audio, video, or image file for deepfake analysis
       </p>
 
       <div
@@ -58,22 +61,18 @@ const FileUpload = ({ onFileSelect }: FileUploadProps) => {
         <input
           ref={inputRef}
           type="file"
-          accept="audio/*,video/*"
+          accept="audio/*,video/*,image/*"
           className="hidden"
           onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
         />
 
         {selectedFile ? (
           <div className="space-y-3">
-            {isAudio ? (
-              <FileAudio className="w-12 h-12 text-success mx-auto" />
-            ) : (
-              <FileVideo className="w-12 h-12 text-success mx-auto" />
-            )}
+            <FileIcon className="w-12 h-12 text-success mx-auto" />
             <p className="text-foreground font-medium">{selectedFile.name}</p>
             <p className="text-sm text-muted-foreground">
               {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB •{" "}
-              {isAudio ? "Audio" : isVideo ? "Video" : "Media"} File
+              {isAudio ? "Audio" : isVideo ? "Video" : isImage ? "Image" : "Media"} File
             </p>
             <Button
               variant="ghost"
@@ -94,7 +93,7 @@ const FileUpload = ({ onFileSelect }: FileUploadProps) => {
               Drop your file here or click to browse
             </p>
             <p className="text-sm text-muted-foreground">
-              Supports MP3, WAV, MP4, AVI, MOV and more
+              Supports MP3, WAV, MP4, AVI, MOV, JPG, PNG and more
             </p>
           </div>
         )}
