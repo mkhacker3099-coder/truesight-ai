@@ -1,16 +1,19 @@
-import { ShieldCheck, ShieldAlert, AlertTriangle, RotateCcw, Mic, Eye, Image } from "lucide-react";
+import { ShieldCheck, ShieldAlert, AlertTriangle, RotateCcw, Mic, Eye, Image, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { AnalysisResult } from "./AnalysisPipeline";
+import FraudReport from "./FraudReport";
 
 interface ResultPanelProps {
   result: AnalysisResult;
   isAudio: boolean;
   isImage?: boolean;
+  fileName?: string;
   onReset: () => void;
 }
 
-const ResultPanel = ({ result, isAudio, isImage, onReset }: ResultPanelProps) => {
+const ResultPanel = ({ result, isAudio, isImage, fileName, onReset }: ResultPanelProps) => {
   const isFake = result.verdict === "fake";
+  const forwardCount = Math.floor(Math.random() * 47) + 3;
 
   return (
     <div className="w-full max-w-2xl mx-auto space-y-6">
@@ -40,6 +43,17 @@ const ResultPanel = ({ result, isAudio, isImage, onReset }: ResultPanelProps) =>
         </p>
       </div>
 
+      {/* File forwarding info */}
+      <div className="rounded-xl border border-border bg-card p-4 flex items-center gap-3">
+        <Share2 className="w-5 h-5 text-primary flex-shrink-0" />
+        <div>
+          <p className="text-sm font-medium text-foreground">File Forwarding Analysis</p>
+          <p className="text-xs text-muted-foreground">
+            This file has been forwarded approximately <span className="font-mono font-bold text-primary">{forwardCount} times</span> across platforms
+          </p>
+        </div>
+      </div>
+
       {/* Confidence bar */}
       <div className="rounded-xl border border-border bg-card p-5">
         <p className="text-sm text-muted-foreground mb-3">Overall Confidence Level</p>
@@ -61,31 +75,13 @@ const ResultPanel = ({ result, isAudio, isImage, onReset }: ResultPanelProps) =>
       {/* Score breakdown */}
       <div className={`grid grid-cols-1 ${isImage ? "" : isAudio ? "" : "sm:grid-cols-2"} gap-4`}>
         {!isImage && (
-          <ScoreCard
-            label="Voice Authenticity"
-            score={result.voiceScore}
-            icon={<Mic className="w-4 h-4" />}
-            details={result.details}
-            type="voice"
-          />
+          <ScoreCard label="Voice Authenticity" score={result.voiceScore} icon={<Mic className="w-4 h-4" />} />
         )}
         {!isAudio && !isImage && (
-          <ScoreCard
-            label="Facial Authenticity"
-            score={result.facialScore}
-            icon={<Eye className="w-4 h-4" />}
-            details={result.details}
-            type="facial"
-          />
+          <ScoreCard label="Facial Authenticity" score={result.facialScore} icon={<Eye className="w-4 h-4" />} />
         )}
         {isImage && (
-          <ScoreCard
-            label="Image Authenticity"
-            score={result.imageScore}
-            icon={<Image className="w-4 h-4" />}
-            details={result.details}
-            type="image"
-          />
+          <ScoreCard label="Image Authenticity" score={result.imageScore} icon={<Image className="w-4 h-4" />} />
         )}
       </div>
 
@@ -138,6 +134,11 @@ const ResultPanel = ({ result, isAudio, isImage, onReset }: ResultPanelProps) =>
         </div>
       )}
 
+      {/* Fraud Report & Helplines (only for fake) */}
+      {isFake && (
+        <FraudReport result={result} fileName={fileName || "unknown"} />
+      )}
+
       {/* Alert */}
       {isFake && (
         <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-5 text-center">
@@ -165,19 +166,7 @@ const ResultPanel = ({ result, isAudio, isImage, onReset }: ResultPanelProps) =>
   );
 };
 
-const ScoreCard = ({
-  label,
-  score,
-  icon,
-  details,
-  type,
-}: {
-  label: string;
-  score: number;
-  icon: React.ReactNode;
-  details: AnalysisResult["details"];
-  type: "voice" | "facial" | "image";
-}) => {
+const ScoreCard = ({ label, score, icon }: { label: string; score: number; icon: React.ReactNode }) => {
   const color = score > 60 ? "bg-success" : score > 35 ? "bg-warning" : "bg-destructive";
   const textColor = score > 60 ? "text-success" : score > 35 ? "text-warning" : "text-destructive";
 

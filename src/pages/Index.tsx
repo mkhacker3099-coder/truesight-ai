@@ -1,4 +1,5 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
+import { toast } from "sonner";
 import Navbar from "@/components/Navbar";
 import HeroSection from "@/components/HeroSection";
 import FeatureGrid from "@/components/FeatureGrid";
@@ -7,17 +8,33 @@ import AnalysisPipeline, { AnalysisResult } from "@/components/AnalysisPipeline"
 import ResultPanel from "@/components/ResultPanel";
 import ProfilePanel from "@/components/ProfilePanel";
 import HistoryPanel from "@/components/HistoryPanel";
+import LoginPage from "@/components/LoginPage";
+import Dashboard from "@/components/Dashboard";
+import FeedbackPanel from "@/components/FeedbackPanel";
+import BiometricIdentity from "@/components/BiometricIdentity";
+import ProsodyAnalysis from "@/components/ProsodyAnalysis";
+import HeadPoseAnalysis from "@/components/HeadPoseAnalysis";
+import MultimodeDetector from "@/components/MultimodeDetector";
+import WatermarkDetection from "@/components/WatermarkDetection";
+import VideoDubbing from "@/components/VideoDubbing";
 import { addScanRecord, type ScanRecord } from "@/lib/history";
+import { getAuthUser, logout as authLogout, type AuthUser } from "@/lib/auth";
+import { initTheme } from "@/lib/theme";
 
 type Stage = "landing" | "upload" | "analyzing" | "result";
-type Page = "home" | "profile" | "history";
+type Page = "dashboard" | "home" | "profile" | "history" | "feedback" | "biometric" | "prosody" | "headpose" | "multimode" | "watermark" | "dubbing";
 
 const Index = () => {
+  const [user, setUser] = useState<AuthUser | null>(getAuthUser());
   const [stage, setStage] = useState<Stage>("landing");
-  const [page, setPage] = useState<Page>("home");
+  const [page, setPage] = useState<Page>("dashboard");
   const [file, setFile] = useState<File | null>(null);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const detectRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    initTheme();
+  }, []);
 
   const scrollToDetect = () => {
     setStage("upload");
@@ -34,7 +51,6 @@ const Index = () => {
     setStage("result");
   }, []);
 
-  // Save to history when result is set
   const handleCompleteAndSave = useCallback((r: AnalysisResult) => {
     handleComplete(r);
     if (file) {
@@ -67,12 +83,54 @@ const Index = () => {
     setPage("home");
   };
 
+  const handleLogin = (u: AuthUser) => {
+    setUser(u);
+    setPage("dashboard");
+  };
+
+  const handleLogout = () => {
+    authLogout();
+    setUser(null);
+    setPage("dashboard");
+    toast("Thank you for using DeepFakeGuard! 👋", {
+      description: "You have been safely logged out. Stay protected!",
+    });
+  };
+
+  // Not logged in
+  if (!user) {
+    return <LoginPage onLogin={handleLogin} />;
+  }
+
   const isAudio = file?.type.startsWith("audio") ?? false;
   const isImage = file?.type.startsWith("image") ?? false;
 
+  const renderToolPage = () => {
+    switch (page) {
+      case "biometric": return <BiometricIdentity />;
+      case "prosody": return <ProsodyAnalysis />;
+      case "headpose": return <HeadPoseAnalysis />;
+      case "multimode": return <MultimodeDetector />;
+      case "watermark": return <WatermarkDetection />;
+      case "dubbing": return <VideoDubbing />;
+      case "feedback": return <FeedbackPanel />;
+      default: return null;
+    }
+  };
+
+  const isToolPage = ["biometric", "prosody", "headpose", "multimode", "watermark", "dubbing", "feedback"].includes(page);
+
   return (
     <div className="min-h-screen bg-background">
-      <Navbar onNavigate={handleNavigate} activePage={page} />
+      <Navbar onNavigate={handleNavigate} activePage={page} isLoggedIn={!!user} onLogout={handleLogout} />
+
+      {page === "dashboard" && (
+        <div className="pt-24 pb-20 px-4">
+          <div className="container mx-auto">
+            <Dashboard user={user} onNavigate={handleNavigate} />
+          </div>
+        </div>
+      )}
 
       {page === "profile" && (
         <div className="pt-24 pb-20 px-4">
@@ -86,6 +144,14 @@ const Index = () => {
         <div className="pt-24 pb-20 px-4">
           <div className="container mx-auto">
             <HistoryPanel onViewResult={handleViewHistoryResult} />
+          </div>
+        </div>
+      )}
+
+      {isToolPage && (
+        <div className="pt-24 pb-20 px-4">
+          <div className="container mx-auto">
+            {renderToolPage()}
           </div>
         </div>
       )}
@@ -111,12 +177,25 @@ const Index = () => {
                   result={result}
                   isAudio={isAudio}
                   isImage={isImage}
+                  fileName={file?.name}
                   onReset={handleReset}
                 />
               )}
             </div>
           </div>
         </>
+      )}
+
+      {/* Feedback link in footer */}
+      {page !== "feedback" && (
+        <div className="fixed bottom-4 right-4 z-40">
+          <button
+            onClick={() => setPage("feedback")}
+            className="bg-primary text-primary-foreground px-4 py-2 rounded-full text-sm font-medium hover:bg-primary/90 transition-colors glow-primary shadow-lg"
+          >
+            💬 Feedback
+          </button>
+        </div>
       )}
     </div>
   );
