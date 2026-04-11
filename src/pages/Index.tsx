@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { ArrowLeft } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
 import Navbar from "@/components/Navbar";
 import HeroSection from "@/components/HeroSection";
 import FeatureGrid from "@/components/FeatureGrid";
@@ -44,48 +45,27 @@ const Index = () => {
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const detectRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    initTheme();
-  }, []);
+  useEffect(() => { initTheme(); }, []);
 
   const scrollToDetect = () => {
     setStage("upload");
     setTimeout(() => detectRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
   };
 
-  const handleFileSelect = (f: File) => {
-    setFile(f);
-    setStage("analyzing");
-  };
+  const handleFileSelect = (f: File) => { setFile(f); setStage("analyzing"); };
 
-  const handleComplete = useCallback((r: AnalysisResult) => {
-    setResult(r);
-    setStage("result");
-  }, []);
+  const handleComplete = useCallback((r: AnalysisResult) => { setResult(r); setStage("result"); }, []);
 
   const handleCompleteAndSave = useCallback((r: AnalysisResult) => {
     handleComplete(r);
-    if (file) {
-      addScanRecord({
-        fileName: file.name,
-        fileType: file.type,
-        fileSize: file.size,
-        result: r,
-      });
-    }
+    if (file) addScanRecord({ fileName: file.name, fileType: file.type, fileSize: file.size, result: r });
   }, [file, handleComplete]);
 
-  const handleReset = () => {
-    setFile(null);
-    setResult(null);
-    setStage("upload");
-  };
+  const handleReset = () => { setFile(null); setResult(null); setStage("upload"); };
 
   const handleNavigate = (p: string) => {
     setPage(p as Page);
-    if (p === "home" && stage === "landing") {
-      setStage("landing");
-    }
+    if (p === "home" && stage === "landing") setStage("landing");
   };
 
   const handleViewHistoryResult = (record: ScanRecord) => {
@@ -95,23 +75,16 @@ const Index = () => {
     setPage("home");
   };
 
-  const handleLogin = (u: AuthUser) => {
-    setUser(u);
-    setPage("dashboard");
-  };
+  const handleLogin = (u: AuthUser) => { setUser(u); setPage("dashboard"); };
 
   const handleLogout = () => {
     authLogout();
     setUser(null);
     setPage("dashboard");
-    toast("Thank you for using DeepFakeGuard! 👋", {
-      description: "You have been safely logged out. Stay protected!",
-    });
+    toast("Thank you for using VoxVerify! 👋", { description: "You have been safely logged out. Stay protected!" });
   };
 
-  if (!user) {
-    return <LoginPage onLogin={handleLogin} />;
-  }
+  if (!user) return <LoginPage onLogin={handleLogin} />;
 
   const isAudio = file?.type.startsWith("audio") ?? false;
   const isImage = file?.type.startsWith("image") ?? false;
@@ -131,12 +104,8 @@ const Index = () => {
   };
 
   const BackButton = ({ label }: { label?: string }) => (
-    <button
-      onClick={() => setPage("dashboard")}
-      className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors mb-4"
-    >
-      <ArrowLeft className="w-4 h-4" />
-      {label || "Back to Dashboard"}
+    <button onClick={() => setPage("dashboard")} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors mb-4">
+      <ArrowLeft className="w-4 h-4" /> {label || "Back to Dashboard"}
     </button>
   );
 
@@ -144,84 +113,55 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       <Navbar onNavigate={handleNavigate} activePage={page} isLoggedIn={!!user} onLogout={handleLogout} />
 
-      {page === "dashboard" && (
-        <div className="pt-24 pb-20 px-4">
-          <div className="container mx-auto">
-            <Dashboard user={user} onNavigate={handleNavigate} />
-          </div>
-        </div>
-      )}
+      <AnimatePresence mode="wait">
+        {page === "dashboard" && (
+          <motion.div key="dashboard" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }} className="pt-24 pb-20 px-4">
+            <div className="container mx-auto"><Dashboard user={user} onNavigate={handleNavigate} /></div>
+          </motion.div>
+        )}
 
-      {page === "profile" && (
-        <div className="pt-24 pb-20 px-4">
-          <div className="container mx-auto">
-            <ProfilePanel onBack={() => setPage("dashboard")} />
-          </div>
-        </div>
-      )}
+        {page === "profile" && (
+          <motion.div key="profile" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }} className="pt-24 pb-20 px-4">
+            <div className="container mx-auto"><ProfilePanel onBack={() => setPage("dashboard")} /></div>
+          </motion.div>
+        )}
 
-      {page === "history" && (
-        <div className="pt-24 pb-20 px-4">
-          <div className="container mx-auto page-enter">
-            <BackButton />
-            <HistoryPanel onViewResult={handleViewHistoryResult} />
-          </div>
-        </div>
-      )}
-
-      {isToolPage && (
-        <div className="pt-24 pb-20 px-4">
-          <div className="container mx-auto page-enter">
-            <BackButton label={`Back — ${TOOL_LABELS[page] || ""}`} />
-            {renderToolPage()}
-          </div>
-        </div>
-      )}
-
-      {page === "home" && (
-        <>
-          {(stage === "landing" || stage === "upload") && (
-            <HeroSection onGetStarted={scrollToDetect} />
-          )}
-
-          <div id="features">
-            {(stage === "landing" || stage === "upload") && <FeatureGrid />}
-          </div>
-
-          <div id="detect" ref={detectRef} className="py-20 px-4">
+        {page === "history" && (
+          <motion.div key="history" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }} className="pt-24 pb-20 px-4">
             <div className="container mx-auto">
-              {stage === "upload" && (
-                <div className="page-enter">
-                  <BackButton />
-                  <FileUpload onFileSelect={handleFileSelect} />
-                </div>
-              )}
-              {stage === "analyzing" && file && (
-                <div className="page-enter">
-                  <AnalysisPipeline file={file} onComplete={handleCompleteAndSave} />
-                </div>
-              )}
-              {stage === "result" && result && (
-                <ResultPanel
-                  result={result}
-                  isAudio={isAudio}
-                  isImage={isImage}
-                  fileName={file?.name}
-                  onReset={handleReset}
-                />
-              )}
+              <BackButton />
+              <HistoryPanel onViewResult={handleViewHistoryResult} />
             </div>
-          </div>
-        </>
-      )}
+          </motion.div>
+        )}
 
-      {/* Feedback FAB */}
+        {isToolPage && (
+          <motion.div key={page} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }} className="pt-24 pb-20 px-4">
+            <div className="container mx-auto">
+              <BackButton label={`Back — ${TOOL_LABELS[page] || ""}`} />
+              {renderToolPage()}
+            </div>
+          </motion.div>
+        )}
+
+        {page === "home" && (
+          <motion.div key="home" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+            {(stage === "landing" || stage === "upload") && <HeroSection onGetStarted={scrollToDetect} />}
+            <div id="features">{(stage === "landing" || stage === "upload") && <FeatureGrid />}</div>
+            <div id="detect" ref={detectRef} className="py-20 px-4">
+              <div className="container mx-auto">
+                {stage === "upload" && <><BackButton /><FileUpload onFileSelect={handleFileSelect} /></>}
+                {stage === "analyzing" && file && <AnalysisPipeline file={file} onComplete={handleCompleteAndSave} />}
+                {stage === "result" && result && <ResultPanel result={result} isAudio={isAudio} isImage={isImage} fileName={file?.name} onReset={handleReset} />}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {page !== "feedback" && (
         <div className="fixed bottom-4 right-4 z-40">
-          <button
-            onClick={() => setPage("feedback")}
-            className="bg-primary text-primary-foreground px-4 py-2 rounded-full text-sm font-medium hover:bg-primary/90 transition-all glow-primary shadow-lg hover:scale-105"
-          >
+          <button onClick={() => setPage("feedback")} className="magnetic-btn bg-primary text-primary-foreground px-4 py-2 rounded-full text-sm font-medium glow-primary shadow-lg font-display">
             💬 Feedback
           </button>
         </div>
